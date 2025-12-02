@@ -1,57 +1,36 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+import mongoose from 'mongoose';
 
-const Product = sequelize.define('Product', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  code: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true
-  },
+const productSchema = new mongoose.Schema({
   name: {
-    type: DataTypes.STRING(100),
-    allowNull: false
-  },
-  description: {
-    type: DataTypes.TEXT
+    type: String,
+    required: [true, 'El nombre es requerido'],
+    trim: true
   },
   price: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    validate: {
-      min: 0
-    }
+    type: Number,
+    required: [true, 'El precio es requerido'],
+    min: [0, 'El precio no puede ser negativo']
   },
   stock: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-    validate: {
-      min: 0
-    }
+    type: Number,
+    required: [true, 'El stock es requerido'],
+    min: [0, 'El stock no puede ser negativo'],
+    default: 0
   },
   category: {
-    type: DataTypes.STRING(50)
+    type: String,
+    required: [true, 'La categoría es requerida'],
+    trim: true
   },
-  isActive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
-  },
-  createdAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
-  },
-  updatedAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+  description: {
+    type: String,
+    trim: true,
+    default: ''
   }
 }, {
-  tableName: 'products',
   timestamps: true
 });
 
-module.exports = Product;
+const Product = mongoose.model('Product', productSchema);
+
+export default Product;

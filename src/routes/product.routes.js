@@ -1,54 +1,50 @@
-const express = require('express');
+import express from 'express';
+import Product from '../models/Product.js';
+
 const router = express.Router();
-const productController = require('../controllers/product.controller');
-const productValidation = require('../validations/product.validation');
-const verifyToken = require('../middleware/auth');
-const checkRole = require('../middleware/role');
 
-router.use(verifyToken);
-
-// Obtener todos los productos
-router.get('/', productController.getAllProducts);
-
-// Obtener productos con bajo stock
-router.get('/low-stock', productController.getLowStockProducts);
-
-// Obtener producto por ID
-router.get('/:id', productController.getProductById);
-
-// Obtener producto por código
-router.get('/code/:code', async (req, res) => {
+// GET todos los productos
+router.get('/', async (req, res) => {
   try {
-    const { code } = req.params;
-    const product = await require('../services/product.service').getProductByCode(code);
-    res.json({ product });
+    const products = await Product.find();
+    res.status(200).json(products);
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Rutas solo para ADMIN
-router.post('/',
-  checkRole('ADMIN'),
-  productValidation.createProductValidation,
-  productController.createProduct
-);
+// GET producto por ID
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-router.put('/:id',
-  checkRole('ADMIN'),
-  productValidation.updateProductValidation,
-  productController.updateProduct
-);
+// POST crear nuevo producto
+router.post('/', async (req, res) => {
+  try {
+    console.log('📨 Datos recibidos:', req.body); // Para debug
 
-router.delete('/:id',
-  checkRole('ADMIN'),
-  productController.deleteProduct
-);
+    const product = new Product({
+      name: req.body.name,
+      price: req.body.price,
+      stock: req.body.stock,
+      category: req.body.category,
+      description: req.body.description
+    });
 
-// Actualizar stock
-router.patch('/:id/stock',
-  checkRole('ADMIN'),
-  productController.updateStock
-);
+    const savedProduct = await product.save();
+    res.status(201).json(savedProduct);
+  } catch (error) {
+    console.error('❌ Error al crear producto:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
 
-module.exports = router;
+export default router;

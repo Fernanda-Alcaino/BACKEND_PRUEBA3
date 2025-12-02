@@ -1,18 +1,92 @@
-// src/routes/auth.routes.js - VERSIÓN CORREGIDA
-const express = require('express');
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+
 const router = express.Router();
-const authController = require('../controllers/auth.controller');
-const authValidation = require('../validations/auth.validation');
-const verifyToken = require('../middleware/auth');
 
-// Login - PÚBLICO (todos pueden loguearse)
-router.post('/login', authValidation.loginValidation, authController.login);
+// Login para obtener token
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-// Registrar nuevo usuario - TEMPORALMENTE PÚBLICO (para crear primer admin)
-// Después de crear el admin, cambia a: verifyToken, authValidation.registerValidation, authController.register
-router.post('/register', authValidation.registerValidation, authController.register);
+    // Buscar usuario
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
-// Obtener perfil del usuario actual - PROTEGIDO (requiere token)
-router.get('/profile', verifyToken, authController.getProfile);
+    // Verificar contraseña
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
-module.exports = router;
+    // Verificar si es admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Acceso solo para administradores' });
+    }
+
+    // Actualizar último login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generar token JWT
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+        name: user.name
+      },
+      process.env.JWT_SECRET || 'secret_key',
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      message: 'Login exitoso',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Crear usuario admin inicial (solo para desarrollo)
+router.post('/setup-admin', async (req, res) => {
+  try {
+    // Verificar si ya existe admin
+    const adminExists = await User.findOne({ role: 'admin' });
+    if (adminExists) {
+      return res.status(400).json({ error: 'Admin ya existe' });
+    }
+
+    const admin = new User({
+      name: 'Administrador',
+      email: 'admin@example.com',
+      password: 'admin123', // Cambiar en producción
+      role: 'admin'
+    });
+
+    await admin.save();
+
+    res.status(201).json({
+      message: 'Usuario admin creado exitosamente',
+      user: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export default router;

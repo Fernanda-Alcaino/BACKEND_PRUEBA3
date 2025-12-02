@@ -1,75 +1,58 @@
-// src/models/User.js - VERSIÓN CORREGIDA
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  username: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'El nombre es requerido'],
+    trim: true
   },
   email: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
+    type: String,
+    required: [true, 'El email es requerido'],
     unique: true,
-    validate: {
-      isEmail: true
-    }
+    lowercase: true,
+    trim: true
   },
   password: {
-    type: DataTypes.STRING(255),
-    allowNull: false
+    type: String,
+    required: [true, 'La contraseña es requerida'],
+    minlength: 6
   },
   role: {
-    type: DataTypes.ENUM('ADMIN', 'CAJERO'),
-    allowNull: false,
-    defaultValue: 'CAJERO'
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
   isActive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
+    type: Boolean,
+    default: true
   },
-  createdAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
-  },
-  updatedAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+  lastLogin: {
+    type: Date
   }
 }, {
-  tableName: 'users',
-  timestamps: true,
-  hooks: {
-    beforeCreate: async (user) => {
-      if (user.password) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
-      }
-    },
-    beforeUpdate: async (user) => {
-      if (user.changed('password')) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
-      }
-    }
+  timestamps: true
+});
+
+// Hash password antes de guardar
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
   }
 });
 
-// Método para comparar contraseñas
-User.prototype.comparePassword = async function(candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    console.error('Error comparando contraseñas:', error);
-    return false;
-  }
+// Método para comparar password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = User;
+const User = mongoose.model('User', userSchema);
+
+export default User;

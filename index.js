@@ -1,3 +1,4 @@
+// ESTO QUEDA IGUAL, NO LO CAMBIES
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -6,20 +7,15 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares básicos
 app.use(cors());
 app.use(express.json());
 
 // Ruta de prueba
 app.get('/', (req, res) => {
-  res.json({
-    message: '¡API funcionando!',
-    status: 'OK',
-    timestamp: new Date().toISOString()
-  });
+  res.json({ message: '¡API funcionando!' });
 });
 
-// Ruta GET de ejemplo
+// Ruta GET productos (TU CÓDIGO ACTUAL)
 app.get('/api/products', (req, res) => {
   res.json([
     { id: 1, name: 'Producto 1', price: 100 },
@@ -27,7 +23,7 @@ app.get('/api/products', (req, res) => {
   ]);
 });
 
-// Ruta POST de ejemplo
+// Ruta POST productos (TU CÓDIGO ACTUAL)
 app.post('/api/products', (req, res) => {
   console.log('📨 Datos recibidos:', req.body);
   res.status(201).json({
@@ -37,14 +33,7 @@ app.post('/api/products', (req, res) => {
   });
 });
 
-// Manejo de errores
-app.use((req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
-});
-
-// Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en: http://localhost:${PORT}`);
-  console.log(`📁 Directorio: ${process.cwd()}`);
 });
